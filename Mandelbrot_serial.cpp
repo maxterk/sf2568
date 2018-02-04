@@ -2,6 +2,7 @@
 #include <mpi.h>
 #include <cmath>
 
+
 using namespace std;
 
 class Pixel
@@ -48,6 +49,7 @@ public:
   }
 
 };
+/*serial test */
 int main(int argc, char *argv[]) {
 
   double b=2;  // size of picture
@@ -82,7 +84,7 @@ int main(int argc, char *argv[]) {
 
     }
 
- 
+  
   
   MPI_Finalize();
   fclose(fp);
