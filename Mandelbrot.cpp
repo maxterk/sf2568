@@ -49,6 +49,7 @@ int main(int argc, char *argv[]) {
 
   int hello = MPI_Comm_size(MPI_COMM_WORLD, &size);
   int hello2 = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  // comment
 
   Pixel p(1/(1+(float) rank),1/(1+(float) rank));
   std::cout <<"Rank: "<< rank <<'\n'<<p.calcPixel(2.0,256)<< "\n\n";
