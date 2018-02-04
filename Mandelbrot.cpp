@@ -50,13 +50,12 @@ public:
 };
 int main(int argc, char *argv[]) {
 
-  double b=2;
-  int w=2048;
-  int h=2048;
-  int r=w*h;
-  double dx= (double) 2*b/(w-1);
-  double dy= (double) 2*b/(h-1);
-  double dreal;
+  double b=2;  // size of picture
+  int w=2048;// number of pixels along the x-axis
+  int h=2048;//number of pixels along the y-axis
+  double dx= (double) 2*b/(w-1); // increment in width
+  double dy= (double) 2*b/(h-1); // increment in height
+  double dreal; // temporary variable
   double dimag;
   FILE *fp;
   fp = fopen("color.txt","w");
@@ -67,20 +66,17 @@ int main(int argc, char *argv[]) {
   int hello2 = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   
   
-  
+  // very important to set the number of nodes to 1 when running this with mpirun! 
  Pixel * pixel_array;
- unsigned char* color;
   
   pixel_array= new Pixel [w*h];
-  color=new unsigned char [w*h];
 
-  for(int x=0;x<w;x++){
+  for(int x=0;x<w;x++){ // for each column in picture
     dreal=(double)x*dx-b;
-    for(int y=0;y<h;y++ ){
+    for(int y=0;y<h;y++ ){ // for each row picture
       dimag=(double)y*dy-b;
-      pixel_array[x*h+y].set_pixel(dreal,dimag);     
-      //cout<< pixel_array[x*h+y].calcPixel(2.0,256)<< "\n";
-    fprintf(fp, "%hhu", pixel_array[x*h+y].calcPixel(2.0,256));
+      pixel_array[x*h+y].set_pixel(dreal,dimag);    
+      fprintf(fp, "%hhu", pixel_array[x*h+y].calcPixel(2.0,256)); // printing pixelvalue to file
     fprintf(fp, "\n");
     }
 
