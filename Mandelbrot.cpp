@@ -56,8 +56,10 @@ int main(int argc, char *argv[]) {
   int r=w*h;
   double dx= (double) 2*b/(w-1);
   double dy= (double) 2*b/(h-1);
- 
-  
+  double dreal;
+  double dimag;
+  FILE *fp;
+  fp = fopen("color.txt","w");
   int rc = MPI_Init(&argc,&argv);
   int size,rank;
   MPI_Status status;
@@ -66,20 +68,28 @@ int main(int argc, char *argv[]) {
   
   
   
-  Pixel * pixel_array;
+ Pixel * pixel_array;
+ unsigned char* color;
   
-  pixel_array= new Pixel [100];
+  pixel_array= new Pixel [w*h];
+  color=new unsigned char [w*h];
 
   for(int x=0;x<w;x++){
-    for(int y=0; )
-    pixel_array[i].set_pixel((double)i/100,(double)i/100);
-    cout<< pixel_array[i].calcPixel(2.0,256)<< "\n";
+    dreal=(double)x*dx-b;
+    for(int y=0;y<h;y++ ){
+      dimag=(double)y*dy-b;
+      pixel_array[x*h+y].set_pixel(dreal,dimag);     
+      //cout<< pixel_array[x*h+y].calcPixel(2.0,256)<< "\n";
+    fprintf(fp, "%hhu", pixel_array[x*h+y].calcPixel(2.0,256));
+    fprintf(fp, "\n");
+    }
 
     }
 
  
   
   MPI_Finalize();
+  fclose(fp);
   return 0;
 
 
