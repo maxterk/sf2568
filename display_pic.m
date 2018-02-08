@@ -1,14 +1,13 @@
-clear all,close all
+clear all
+close all
 load -ascii color.txt
 
- 
- color_array=zeros(2048,2048);
- for n=1:2048
-     for m=1:2048
-         color_array(n,m)=color(m +(n-1)*2048);
-     end
- end
- 
-
-imagesc(color_array')
-colormap(colorcube)
+myMap=colorcube(256);
+myMap(1,:)=1;
+figure('pos',[10,10,800,800])
+pic=reshape(color,2048,2048);
+% pic=histeq(pic,256);
+imagesc(pic)
+colormap(myMap)
+axis square;
+print('mandelbrot','-dpng');
