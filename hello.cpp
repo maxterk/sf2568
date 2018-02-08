@@ -27,7 +27,7 @@ int main ( int argc, char *argv[] )
   int rank,nProc,errorCode;
   double b=2;
   int N=256;
-  double minx=-2,maxx=2,miny=-2,maxy=2;
+  double minx=-2,maxx=0,miny=-1,maxy=1;
   int width=2048, height=2048;
   double dx=(maxx-minx)/(width-1),dy=(maxy-miny)/(height-1);
 
