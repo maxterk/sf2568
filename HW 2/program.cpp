@@ -6,7 +6,7 @@ using namespace std;
 
 double f(double x)
 {
-  return sin(x);
+  return sin(5*x);
 }
 double r(double x)
 {

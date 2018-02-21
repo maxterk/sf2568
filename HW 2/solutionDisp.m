@@ -8,7 +8,7 @@ x=linspace(0,1,numel(u));
 h=x(2)-x(1);
 
 % Selected function f
-f=sin(x(2:end-1));
+f=sin(5*x(2:end-1));
 % Selected function r
 r=-exp(x);
 
@@ -19,6 +19,8 @@ figure()
 plot(x,u);
 ru=r.*u;
 rhs=ubis+ru(2:end-1);
+legend('Solution')
+print('Solution','-dpng')
 %%
 figure();
 plot(x(2:end-1),rhs);
@@ -27,3 +29,4 @@ plot(x(2:end-1),f)
 fclose('all');
 
 legend('Approximate RHS', 'True, LHS')
+print('Error','-dpng')
