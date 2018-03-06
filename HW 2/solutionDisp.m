@@ -20,13 +20,16 @@ figure()
 plot(x,u);
 ru=r.*u;
 rhs=ubis+ru(2:end-1);
+xlabel('x')
+ylabel('u')
 legend('Solution')
 print('Solution','-dpng')
 fclose('all');
 %%
 figure();
 plot(x(2:end-1),rhs-f);
-
+xlabel('x')
+ylabel('e(x)')
 
 legend('Error')
 print('Error','-dpng')
