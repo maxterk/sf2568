@@ -1,19 +1,51 @@
 # include <iostream>
 # include <mpi.h>
 # include <cmath>
+# include <algorithm>
+# include <vector>
 
 using namespace std;
 
+struct Particle{
+  double x,y,
+          vx,vy;
+};
+
+double randBetween(double fMin, double fMax)
+{
+    double f = (double) rand() / (1.0 + RAND_MAX);
+    return fMin + f * (fMax - fMin);
+}
+int randIntBetween(int a, int b)
+{
+  return rand()%(b-a)+a;
+}
+double median(double a, double b, double c)
+{
+  double maxVal=max(max(a,b),c);
+  double minVal=min(min(a,b),c);
+  if(a!=maxVal && a!=minVal) return a;
+  if(b!=maxVal && b!=minVal) return b;
+  return c;
+}
+
+void factor(int nProc, int &a, int &b)
+{
+  a=(int) sqrt(nProc);
+  b=nProc/a;
+  while(a*b!=nProc)
+  {
+    a--;
+    b=nProc/a;
+  }
+}
 
 int main ( int argc, char *argv[] )
 {
   //Problem parameters
-  int maxIter=1000000;//1000000
-  int N=1000;
-  double uFirst=0, uEnd=0, h=1/((double)N+1);
-
-  //cheaper calculation
-  double h2=pow(h,2);
+  int nParticles=10000;
+  int cutOffDistance=0.01;
+  double xMin=-1,xMax=1,yMin=-1,yMax=1;
 
   int rank,nProc,errorCode;
   //Initializing MPI and getting world size and rank of process.
@@ -22,104 +54,93 @@ int main ( int argc, char *argv[] )
   errorCode = MPI_Comm_rank ( MPI_COMM_WORLD, &rank );
 
 
-  //Checking how many available processes
-  if(nProc>N &&rank==0)
+  //Setting up grid
+  int a,b;
+  factor(nProc,a,b);
+  int indexY=rank%a;
+  int indexX=(rank-indexY)/b;
+  if(rank==0)
   {
-    std::cout << "Error, too many processes" << '\n';
-    return 1;
+    std::cout << "      Grid size" << '\n';
+    std::cout << "######################" << '\n';
+    std::cout << "X-dimension: "<< a << '\n';
+    std::cout << "Y-dimension: "<< b<< '\n';
+    std::cout << "######################" << '\n';
   }
 
-  //Allocating range of indices for the different processes.
-  //May be of unequal size.
-  int prelWidth=N/nProc;
-  int toSpread=N%nProc;
-  int start,end=0;
-  if(rank<toSpread)
+  //Setting seed
+  srand(rank);
+
+  //Creating a proper amount of particles on a processor.
+  Particle particles[nParticles];
+  for (int i = 0; i < nParticles; i++)
   {
-    start=(prelWidth+1)*rank+1;
-    end=start+prelWidth;
-  }
-  else
-  {
-    start=(prelWidth+1)*(toSpread-1)+prelWidth*(rank-toSpread+1)+2;
-    end=start+prelWidth-1;
+    particles[i].x=randBetween(xMin,xMax);
+    particles[i].y=randBetween(yMin,yMax);
   }
 
-  //Allocating arrays for iterative solution
-  double currentSolution [end-start+3];
-  double nextSolution [end-start+3];
-  int pointsInArray=end-start+3;
+  double xMedian=median(
+    particles[randIntBetween(0,nParticles)].x,
+    particles[randIntBetween(0,nParticles)].x,
+    particles[randIntBetween(0,nParticles)].x);
 
-  //Initializing first guess
-  for(int i=0; i<pointsInArray; i++)
-  {
-    currentSolution[i]=1;
-  }
+  double yMedian=median(
+    particles[randIntBetween(0,nParticles)].y,
+    particles[randIntBetween(0,nParticles)].y,
+    particles[randIntBetween(0,nParticles)].y);
 
-  //Making sure initial guess conforms to end values
-  if(rank==0) currentSolution[0]=uFirst;
-  if(rank==nProc-1) currentSolution[pointsInArray-1]=uEnd;
+    double counter=0;
+    std::vector<Particle> lxly;
+    std::vector<Particle> lxsy;
+    std::vector<Particle> sxly;
+    std::vector<Particle> sxsy;
 
-
-  for(int iter=0; iter<maxIter; iter++)
-  {
-      //Calculating next solution
-      for(int i=1; i<pointsInArray-1; i++)
+    for (int i = 0; i < nParticles; i++)
+    {
+      if(particles[i].x>xMedian)
       {
-          nextSolution[i]=
-            (currentSolution[i-1]+currentSolution[i+1]-h2*f((start+i-1)*h))/
-              (2.0-h2*r(h*(start+i-1)));
+        if(particles[i].y>yMedian)
+        {
+          lxly.push_back(particles[i]);
+        }
+        else
+        {
+          lxsy.push_back(particles[i]);
+        }
       }
-
-      //As we use old values to calculate new ones
-      //we need to keep track of them separately.
-      for(int i=1; i<pointsInArray-1; i++)
+      else
       {
-        currentSolution[i]=nextSolution[i];
+        if(particles[i].y>yMedian)
+        {
+          sxly.push_back(particles[i]);
+        }
+        else
+        {
+          sxsy.push_back(particles[i]);
+        }
       }
+    }
 
-      // Communicating values
-      if(nProc>1)
-      {
-        //Even processes' ends overlapping with odds starts
-        if(rank%2==0 && rank!=nProc-1) MPI_Send(&currentSolution[pointsInArray-2], 1, MPI_DOUBLE,rank+1,0,MPI_COMM_WORLD);
-        if(rank%2==1) MPI_Recv(&currentSolution[0], 1, MPI_DOUBLE,rank-1,0,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        if(rank%2==0 && rank!=nProc-1) MPI_Recv(&currentSolution[pointsInArray-1], 1, MPI_DOUBLE,rank+1,1,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        if(rank%2==1) MPI_Send(&currentSolution[1], 1, MPI_DOUBLE,rank-1,1,MPI_COMM_WORLD);
 
-        //odd processes' ends overlapping with evens starts
-        //Left part of overlap
-        if(rank%2==1 && rank!=nProc-1) MPI_Send(&currentSolution[pointsInArray-2], 1, MPI_DOUBLE,rank+1,2,MPI_COMM_WORLD);
-        if(rank%2==0 && rank!=0) MPI_Recv(&currentSolution[0], 1, MPI_DOUBLE,rank-1,2,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        // //Right part of overlap
-        if(rank%2==1 && rank!=nProc-1) MPI_Recv(&currentSolution[pointsInArray-1], 1, MPI_DOUBLE,rank+1,3,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        if(rank%2==0 && rank!=0) MPI_Send(&currentSolution[1], 1, MPI_DOUBLE,rank-1,3,MPI_COMM_WORLD);
-      }
-  }
-
-  //Dummy variable for synchronization purposes.
   int go=1;
 
   //Writing results to file
-  FILE *fp;
+
   if(rank==0)
   {
-    fp = fopen("output.txt","w");
+    std::cout << lxly.size() << ", "
+      << lxsy.size() <<  ", "
+      << sxly.size() <<  ", "
+      << sxsy.size()<< '\n';
   }
   else
   {
-    fp = fopen("output.txt","a");
+    std::cout << lxly.size() << ", "
+      << lxsy.size() <<  ", "
+      << sxly.size() <<  ", "
+      << sxsy.size()<< '\n';
     MPI_Recv(&go, 1, MPI_INT,rank-1,0,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
   }
-
-  for(int i=rank==0?0:1; i<pointsInArray-1; i++)
-  {
-    fprintf(fp, "%f ", currentSolution[i]);
-    fprintf(fp, "\n");
-  }
-  if(rank==nProc-1)
-    fprintf(fp, "%f ", currentSolution[pointsInArray-1]);
-  fclose(fp);
   if(rank==0)
   {
       if(nProc>1)
@@ -130,6 +151,7 @@ int main ( int argc, char *argv[] )
     if(rank<nProc-1)
       MPI_Send(&go, 1, MPI_INT,rank+1,0,MPI_COMM_WORLD);
   }
+
 
   MPI_Finalize();
   return 0;
