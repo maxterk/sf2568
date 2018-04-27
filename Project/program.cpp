@@ -7,8 +7,7 @@
 using namespace std;
 
 struct Particle{
-  double x,y,
-          vx,vy;
+  double x,y;
 };
 
 double randBetween(double fMin, double fMax)
@@ -16,9 +15,9 @@ double randBetween(double fMin, double fMax)
     double f = (double) rand() / (1.0 + RAND_MAX);
     return fMin + f * (fMax - fMin);
 }
-int randIntBetween(int a, int b)
+int randIntBetween(double a, double b)
 {
-  return rand()%(b-a)+a;
+  return fmod(rand(),b-a)+a;
 }
 double median(double a, double b, double c)
 {
@@ -43,7 +42,7 @@ void factor(int nProc, int &a, int &b)
 int main ( int argc, char *argv[] )
 {
   //Problem parameters
-  int nParticles=10000;
+  int nParticles=1000;
   int cutOffDistance=0.01;
   double xMin=-1,xMax=1,yMin=-1,yMax=1;
 
@@ -53,105 +52,150 @@ int main ( int argc, char *argv[] )
   errorCode = MPI_Comm_size ( MPI_COMM_WORLD, &nProc );
   errorCode = MPI_Comm_rank ( MPI_COMM_WORLD, &rank );
 
+  //Adjusting amount of particles
+  nParticles=nParticles-nParticles%nProc;
 
   //Setting up grid
-  int a,b;
-  factor(nProc,a,b);
-  int indexY=rank%a;
-  int indexX=(rank-indexY)/b;
+  int yDim,xDim;
+  factor(nProc,yDim,xDim);
+  int indexY=rank%yDim;
+  int indexX=rank/yDim;
   if(rank==0)
   {
     std::cout << "      Grid size" << '\n';
     std::cout << "######################" << '\n';
-    std::cout << "X-dimension: "<< a << '\n';
-    std::cout << "Y-dimension: "<< b<< '\n';
+    std::cout << "X-dimension: "<< xDim << '\n';
+    std::cout << "Y-dimension: "<< yDim<< '\n';
     std::cout << "######################" << '\n';
   }
 
   //Setting seed
-  srand(rank);
+  //srand(rank);
 
-  //Creating a proper amount of particles on a processor.
+  //Array for particles
   Particle particles[nParticles];
-  for (int i = 0; i < nParticles; i++)
+
+  //Creating a proper amount of particles on first processor.
+  if(rank==0)
   {
-    particles[i].x=randBetween(xMin,xMax);
-    particles[i].y=randBetween(yMin,yMax);
-  }
-
-  double xMedian=median(
-    particles[randIntBetween(0,nParticles)].x,
-    particles[randIntBetween(0,nParticles)].x,
-    particles[randIntBetween(0,nParticles)].x);
-
-  double yMedian=median(
-    particles[randIntBetween(0,nParticles)].y,
-    particles[randIntBetween(0,nParticles)].y,
-    particles[randIntBetween(0,nParticles)].y);
-
-    double counter=0;
-    std::vector<Particle> lxly;
-    std::vector<Particle> lxsy;
-    std::vector<Particle> sxly;
-    std::vector<Particle> sxsy;
-
     for (int i = 0; i < nParticles; i++)
     {
-      if(particles[i].x>xMedian)
-      {
-        if(particles[i].y>yMedian)
-        {
-          lxly.push_back(particles[i]);
-        }
-        else
-        {
-          lxsy.push_back(particles[i]);
-        }
-      }
-      else
-      {
-        if(particles[i].y>yMedian)
-        {
-          sxly.push_back(particles[i]);
-        }
-        else
-        {
-          sxsy.push_back(particles[i]);
-        }
-      }
+      particles[i].x=randBetween(xMin,xMax);
+      particles[i].y=randBetween(yMin,yMax);
     }
+  }
+  MPI_Bcast(&particles, nParticles*2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+  std::vector<double> xVals;
+  std::vector<double> yVals;
 
 
+  for(int i=0; i<nParticles; i++)
+    xVals.push_back(particles[i].x);
+
+
+  // if (rank==0)
+  // {
+  //   //std::nth_element (xVals.begin(), xVals.begin(), xVals.end());
+  //   for(int i=0; i<nParticles; i++)
+  //   {
+  //     std::nth_element (xVals.begin(), xVals.begin()+i, xVals.end());
+  //     std::cout << xVals[i] << '\n';
+  //   }
+  // }
+  //std::nth_element (xVals.begin(), xVals.begin()+, xVals.end());
+  // std::nth_element (xVals.begin(), xVals.begin()+i, xVals.end());
+
+if(rank==0)
+{
+  // std::cout << "/* message */" << '\n';
+  // std::cout << indexX<< " and "<< nParticles/xDim << '\n';
+}
+  std::nth_element (xVals.begin(), xVals.begin()+(indexX+1)*nParticles/xDim-1, xVals.end());
+  std::nth_element (xVals.begin(), xVals.begin()+indexX*nParticles/xDim, xVals.end());
+  double xLower=xVals[indexX*nParticles/xDim],
+          xUpper=xVals[(indexX+1)*nParticles/xDim-1];
+
+  std::vector<Particle> tempSet;
+  for(int i=0; i<nParticles; i++)
+  {
+    if(xLower <=particles[i].x && particles[i].x<=xUpper)
+    {
+      tempSet.push_back(particles[i]);
+      yVals.push_back(particles[i].y);
+    }
+  }
+  // std::cout << tempSet.size()%yDim << '\n';
+  std::nth_element (yVals.begin(), yVals.begin()+(indexY+1)*tempSet.size()/yDim-1, yVals.end());
+  double yUpper=yVals[(indexY+1)*tempSet.size()/yDim-1];
+
+  std::nth_element (yVals.begin(), yVals.begin()+indexY*tempSet.size()/yDim, yVals.end());
+  double yLower=yVals[indexY*tempSet.size()/yDim];
+
+
+  std::vector<Particle> updateSet;
+  // if(rank==0)
+  //   std::cout << "Y-values" << '\n';
+  for(int i=0; i<tempSet.size(); i++)
+  {
+    // if(rank==0)
+    //   std::cout << tempSet[i].y << '\n';
+    if(yLower <=tempSet[i].y && tempSet[i].y<=yUpper)
+    {
+      updateSet.push_back(tempSet[i]);
+    }
+  }
+  std::vector<Particle> complementarySet;
+
+
+  //Synchronized printout
+  FILE *fp;
   int go=1;
-
-  //Writing results to file
-
-  if(rank==0)
+  if(rank!=0)
   {
-    std::cout << lxly.size() << ", "
-      << lxsy.size() <<  ", "
-      << sxly.size() <<  ", "
-      << sxsy.size()<< '\n';
-  }
-  else
-  {
-    std::cout << lxly.size() << ", "
-      << lxsy.size() <<  ", "
-      << sxly.size() <<  ", "
-      << sxsy.size()<< '\n';
     MPI_Recv(&go, 1, MPI_INT,rank-1,0,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-  }
-  if(rank==0)
-  {
-      if(nProc>1)
-        MPI_Send(&go, 1, MPI_INT,rank+1,0,MPI_COMM_WORLD);
+    fp = fopen("output.txt","a");
   }
   else
+  {
+    fp = fopen("output.txt","w");
+  }
+
+  //Actual printout
+  std::cout << "Greetings from processor: "<<rank+1 << '\n';
+  std::cout << "Currently manages: "<<updateSet.size() << '\n';
+  // std::cout << "Xind " <<indexX;
+  // std::cout << " Yind " <<indexY<< '\n';
+  // std::cout << "Xdim " <<xDim;
+  // std::cout << " Ydim " <<yDim<< '\n';
+  for(int i=0; i<updateSet.size(); i++)
+  {
+    // std::cout <<"x: "<< updateSet[i].x<<"y: "<< updateSet[i].y<< '\n';
+    fprintf(fp, "%f ", updateSet[i].x);
+    fprintf(fp, "%f ", updateSet[i].y);
+    fprintf(fp, "%f ", (indexX+indexY)%2==1?1.0:0.0);
+  }
+  // std::cout << "Spacing" << '\n';
+
+  // for(int i=0; i<tempSet.size(); i++)
+  // {
+  //   std::cout <<"x: "<< tempSet[i].x<<"y: "<< tempSet[i].y<< '\n';
+  // }
+  // std::cout << tempSet.size() << '\n';
+  // std::cout << "Y Upper: "<<yUpper << '\n';
+  // std::cout << "Y Lower: "<<yLower << '\n';
+
+//  std::cout << "" << '\n'<<flush;
+  // std::cout << xLower<< " to "<<xUpper << '\n';
+  fflush(stdout);
+
+  //Handing over to next process.
+  fclose(fp);
+  if(nProc>1)
   {
     if(rank<nProc-1)
       MPI_Send(&go, 1, MPI_INT,rank+1,0,MPI_COMM_WORLD);
   }
-
 
   MPI_Finalize();
   return 0;
