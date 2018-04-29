@@ -8,8 +8,12 @@ x=data(:,1);
 y=data(:,2);
 mark=data(:,3)==1;
 
-scatter(x(mark),y(mark),'k','filled')
+scatter(x(~mark),y(~mark),'r','.')
 hold on
-scatter(x(~mark),y(~mark),'r','filled')
+scatter(x(mark),y(mark),'k','.')
+axis([-1 1 -1 1]);
+% legend('Update','Comp')
 
 fclose('all');
+%%
+%print('-dpng', ['parpro' datestr(now, 30)])
