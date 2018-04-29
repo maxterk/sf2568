@@ -42,11 +42,11 @@ void factor(int nProc, int &a, int &b)
 int main ( int argc, char *argv[] )
 {
   //Problem parameters
-  int nParticles=200000;
+  int nParticles=2000;
   double xMin=-1,xMax=1,yMin=-1,yMax=1;
   double minima=sqrt((xMax-xMin)*(yMax-yMin)/nParticles*4/sqrt(3.0));
   double cutOffDistance=minima*3;
-  double deltaT=0.1, tMax=10;
+  double deltaT=0.1, tMax=1;
 
   int rank,nProc,errorCode;
   //Initializing MPI and getting world size and rank of process.
@@ -62,8 +62,7 @@ int main ( int argc, char *argv[] )
   std::vector<double> xVals;
   std::vector<double> yVals;
   std::vector<Particle> xSelect;
-  double xLower,xUpper,
-          yLower, yUpper;
+  double xLower,xUpper, yLower, yUpper;
 
   //Array for particles
   Particle particles[nParticles];
@@ -199,6 +198,21 @@ for(double t=0; t<tMax; t+=deltaT)
   {
     updateSet[i].x+=randBetween(-dummy,dummy);
     updateSet[i].y+=randBetween(-dummy,dummy);
+    for(int j=0; j<updateSet.size(); j++)
+    {
+      if(i!=j)
+      {
+        double dist=sqrt(pow(updateSet[i].x-updateSet[j].x,2)+
+          pow(updateSet[i].x-updateSet[j].y,2));
+        double temp=pow(dist,12)+pow(dist,6);
+      }
+    }
+    for(int j=0; j<complementarySet.size(); j++)
+    {
+      double dist=sqrt(pow(updateSet[i].x-complementarySet[j].x,2)+
+        pow(updateSet[i].x-complementarySet[j].y,2));
+      double temp=pow(dist,12)+pow(dist,6);
+    }
 
     updateSet[i].x=min(updateSet[i].x,xMax);
     updateSet[i].x=max(updateSet[i].x,xMin);
@@ -239,8 +253,8 @@ for(double t=0; t<tMax; t+=deltaT)
   // }
 }
 end=MPI_Wtime();
-MPI_Reduce(&end, &globalEnd, 1, MPI_DOUBLE, MPI_MAX, 0,
-         MPI_COMM_WORLD);
+MPI_Reduce(&end, &globalEnd, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
 if(rank==0)
 {
   std::cout << "Time: "<<globalEnd-globalStart << '\n';
