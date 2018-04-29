@@ -11,7 +11,7 @@ mark=data(:,3)==1;
 scatter(x(~mark),y(~mark),'r','.')
 hold on
 scatter(x(mark),y(mark),'k','.')
-axis([-1 1 -1 1]);
+% axis([-1 1 -1 1]);
 % legend('Update','Comp')
 
 fclose('all');
