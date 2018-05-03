@@ -56,7 +56,7 @@ int main ( int argc, char *argv[] )
   double minima=sqrt((xMax-xMin)*(yMax-yMin)/nParticles*4/sqrt(3.0));
     minima=0.1;
   double cutOffDistance=minima*5;
-  double deltaT=0.001, tMax=100;
+  double deltaT=0.01, tMax=100;
 
   int rank,nProc,errorCode;
   //Initializing MPI and getting world size and rank of process.
@@ -109,16 +109,9 @@ int main ( int argc, char *argv[] )
   {
     for (int i = 0; i < nParticles; i++)
     {
-      // double theta=randBetween(0,2*3.1415926535);
-      // double r=randBetween(0,0.1);
-      // particles[i].x=r*cos(theta);
-      // particles[i].y=r*sin(theta);
-
-
       particles[i].x=randBetween(xMin,xMax);
       particles[i].y=randBetween(yMin,yMax);
 
-      // particles[i].y=r*exp(sin(theta));
       particles[i].vx=0;
       particles[i].vy=0;
     }
@@ -133,40 +126,25 @@ for(double t=0; t<tMax+1; t++)
   double start = MPI_Wtime(),end,globalStart,globalEnd;
   MPI_Reduce(&start, &globalStart, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
 
+  //Clearing all sets related to data structure
   xVals.clear();
   yVals.clear();
   updateSet.clear();
   complementarySet.clear();
   xSelect.clear();
 
+  //Adding x-values for splitting
   for(int i=0; i<nParticles; i++)
     xVals.push_back(particles[i].x);
 
-
-  // if (rank==0)
-  // {
-  //   //std::nth_element (xVals.begin(), xVals.begin(), xVals.end());
-  //   for(int i=0; i<nParticles; i++)
-  //   {
-  //     std::nth_element (xVals.begin(), xVals.begin()+i, xVals.end());
-  //     std::cout << xVals[i] << '\n';
-  //   }
-  // }
-  //std::ntstd::vector<Particle> h_element (xVals.begin(), xVals.begin()+, xVals.end());
-  // std::nth_element (xVals.begin(), xVals.begin()+i, xVals.end());
-
-// if(rank==0)
-// {r
-//   // std::cout << "/* message */" << '\n';
-//   // std::cout << indexX<< " and "<< nParticles/xDim << '\n';
-// }
+  //Finding split values
   std::nth_element (xVals.begin(), xVals.begin()+(indexX+1)*nParticles/xDim-1, xVals.end());
   std::nth_element (xVals.begin(), xVals.begin()+indexX*nParticles/xDim, xVals.end());
   xLower=xVals[indexX*nParticles/xDim];
   xUpper=xVals[(indexX+1)*nParticles/xDim-1];
 
-  xSelect.clear();
 
+  //Adding y-values for y-splitting
   for(int i=0; i<nParticles; i++)
   {
     if(xLower <=particles[i].x && particles[i].x<=xUpper)
@@ -176,18 +154,17 @@ for(double t=0; t<tMax+1; t++)
         xSelect.push_back(particles[i]);
 
   }
-  // std::cout << tempSet.size()%yDim << '\n';
+
+  //Splitting on y-values
   std::nth_element (yVals.begin(), yVals.begin()+(indexY+1)*yVals.size()/yDim-1, yVals.end());
   yUpper=yVals[(indexY+1)*yVals.size()/yDim-1];
-
   std::nth_element (yVals.begin(), yVals.begin()+indexY*yVals.size()/yDim, yVals.end());
   yLower=yVals[indexY*yVals.size()/yDim];
 
 
+  //Dividing into update and complementary set
   for(int i=0; i<xSelect.size(); i++)
   {
-    // if(rank==0)
-    //   std::cout << tempSet[i].y << '\n';
     if(yLower-cutOffDistance<=xSelect[i].y && xSelect[i].y<=yUpper+cutOffDistance)
     {
       if(xLower <=xSelect[i].x && xSelect[i].x<=xUpper)
@@ -209,11 +186,8 @@ for(double t=0; t<tMax+1; t++)
   }
 
   //Updating particles
-  double dummy=0.1;
   for(int i=0; i < updateSet.size(); i++)
   {
-    // updateSet[i].x+=randBetween(-dummy,dummy);
-    // updateSet[i].y+=randBetween(-dummy,dummy);
     for(int j=i+1; j<updateSet.size(); j++)
     {
         double dist=sqrt(pow(updateSet[i].x-updateSet[j].x,2)+
@@ -241,37 +215,40 @@ for(double t=0; t<tMax+1; t++)
     {
       double dist=sqrt(pow(updateSet[i].x-complementarySet[j].x,2)+
         pow(updateSet[i].y-complementarySet[j].y,2));
-        if(dist<cutOffDistance)
-        {
-          double dudr=potentialDerivative(dist, minima, t/tMax);
-          double
-            xixj=updateSet[i].x-complementarySet[j].x,
-            yiyj=updateSet[i].y-complementarySet[j].y,
-            fx=xixj*dudr,
-            fy=yiyj*dudr;
-            updateSet[i].vx+=fx*deltaT;
-            updateSet[i].vy+=fy*deltaT;
 
-        }
+      if(dist<cutOffDistance)
+      {
+        double dudr=potentialDerivative(dist, minima, t/tMax);
+        double
+          xixj=updateSet[i].x-complementarySet[j].x,
+          yiyj=updateSet[i].y-complementarySet[j].y,
+          fx=xixj*dudr,
+          fy=yiyj*dudr;
+          updateSet[i].vx+=fx*deltaT;
+          updateSet[i].vy+=fy*deltaT;
+
+      }
     }
-    // updateSet[i].x=min(updateSet[i].x,xMax);
-    // updateSet[i].x=max(updateSet[i].x,xMin);
-    // updateSet[i].y=min(updateSet[i].y,yMax);
-    // updateSet[i].y=max(updateSet[i].y,yMin);
   }
+
+  //Updating positions based on speed.
   for(int i=0; i < updateSet.size(); i++)
   {
-    updateSet[i].x+=updateSet[i].vx;
-    updateSet[i].y+=updateSet[i].vy;
-    // updateSet[i].vx=0;
-    // updateSet[i].vy=0;
+    updateSet[i].x+=updateSet[i].vx*deltaT;
+    updateSet[i].y+=updateSet[i].vy*deltaT;
   }
 
 
-  // std::vector<Particle> allParticles;
+  //######################################################################
+  //Measuring runtime of one iteration. Sequentially
+  // end=MPI_Wtime();
+  // MPI_Reduce(&end, &globalEnd, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  // if(rank==0)
+  //   iterationTimes.push_back(globalEnd-globalStart);
+  //######################################################################
 
+  //synchronizing particles over all processors.
   particlesPerProcessor[rank]=updateSet.size();
-
   for(int i=0; i<nProc; i++)
   {
     MPI_Bcast(&particlesPerProcessor[i], 1, MPI_INT, i, MPI_COMM_WORLD);
@@ -288,52 +265,39 @@ for(double t=0; t<tMax+1; t++)
       }
     }
     MPI_Bcast(&ps,particlesPerProcessor[i]*4, MPI_DOUBLE,i,MPI_COMM_WORLD);
-    // if(rank==0)
-    //   std::cout << particlesPerProcessor[i] << '\n';
 
     for(int j=0; j<particlesPerProcessor[i]; j++)
     {
       particles[cumPart[i]+j]=ps[j];
     }
   }
-  // if(rank==0)
-  // {
-  //   std::cout << "Fraction completed: "<<100*t/tMax << '\n';
-  // }
+
+
+  //######################################################################
+  //Measuring runtime of one iteration in parallel.
   end=MPI_Wtime();
   MPI_Reduce(&end, &globalEnd, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   if(rank==0)
     iterationTimes.push_back(globalEnd-globalStart);
-
-  // if(rank==0)
-  // {
-  //   std::cout << "Time: "<<globalEnd-globalStart << '\n';
-  // }
+  //######################################################################
 }
 
-// if(rank==0)
-// {
-//   for (int i =0; i < nProc; i++)
-//   {
-//     std::cout << "Particles up to processor "<< i+1<<" is "<< cumPart[i] << '\n';
-//   }
-// }
 
 
   // Synchronized printout
-  FILE *fp;
-  int go=1;
-  if(rank!=0)
-  {
-    MPI_Recv(&go, 1, MPI_INT,rank-1,0,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    // fp = fopen("output.txt","a");
-    fp = fopen("times.txt","a");
-  }
-  else
-  {
-    // fp = fopen("output.txt","w");
-    fp = fopen("times.txt","a");
-  }
+  // FILE *fp;
+  // int go=1;
+  // if(rank!=0)
+  // {
+  //   MPI_Recv(&go, 1, MPI_INT,rank-1,0,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  //   // fp = fopen("output.txt","a");
+  //   fp = fopen("times.txt","a");
+  // }
+  // else
+  // {
+  //   // fp = fopen("output.txt","w");
+  //   fp = fopen("times.txt","a");
+  // }
 
   //Actual printout
   // std::cout << "Greetings from processor: "<<rank+1 << '\n';
@@ -391,15 +355,15 @@ if(rank==0)
 
 //  std::cout << "" << '\n'<<flush;
   // std::cout << xLower<< " to "<<xUpper << '\n';
-  fflush(stdout);
-
-  //Handing over to next process.
-  fclose(fp);
-  if(nProc>1)
-  {
-    if(rank<nProc-1)
-      MPI_Send(&go, 1, MPI_INT,rank+1,0,MPI_COMM_WORLD);
-  }
+  // fflush(stdout);
+  //
+  // //Handing over to next process.
+  // fclose(fp);
+  // if(nProc>1)
+  // {
+  //   if(rank<nProc-1)
+  //     MPI_Send(&go, 1, MPI_INT,rank+1,0,MPI_COMM_WORLD);
+  // }
 
   MPI_Finalize();
   return 0;
