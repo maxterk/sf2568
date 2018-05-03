@@ -1,0 +1,4 @@
+C:\Users\max\OneDrive\KTH\Parallella ber�kningar\L�xor\sf2568\Project\program.cpp:2:18: fatal error: mpi.h: No such file or directory
+ # include <mpi.h>
+                  ^
+compilation terminated.
