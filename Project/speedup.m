@@ -25,6 +25,7 @@ B3 = importdata(filename6);
 time_par=(A1+A2+A3)/3;
 time_seq=(B1+B2+B3)/3;
 
+%%
 cumSeq=1:numel(time_seq);
 cumSeq=cumSeq'.*time_seq;
 figure(1)

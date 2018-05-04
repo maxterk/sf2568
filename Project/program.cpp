@@ -123,8 +123,8 @@ int main ( int argc, char *argv[] )
 for(double t=0; t<tMax+1; t++)
 {
   MPI_Barrier(MPI_COMM_WORLD); /* IMPORTANT */
-  double start = MPI_Wtime(),end,globalStart,globalEnd;
-  MPI_Reduce(&start, &globalStart, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+  double start = MPI_Wtime(),time,globalTime;
+  // MPI_Reduce(&start, &globalStart, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
 
   //Clearing all sets related to data structure
   xVals.clear();
@@ -240,11 +240,11 @@ for(double t=0; t<tMax+1; t++)
 
 
   //######################################################################
-  //Measuring runtime of one iteration. Sequentially
-  // end=MPI_Wtime();
-  // MPI_Reduce(&end, &globalEnd, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  //Measuring runtime of one iteration in parallel.
+  // time=MPI_Wtime()-start;
+  // MPI_Reduce(&time, &globalTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   // if(rank==0)
-  //   iterationTimes.push_back(globalEnd-globalStart);
+  //   iterationTimes.push_back(globalTime);
   //######################################################################
 
   //synchronizing particles over all processors.
@@ -275,10 +275,10 @@ for(double t=0; t<tMax+1; t++)
 
   //######################################################################
   //Measuring runtime of one iteration in parallel.
-  end=MPI_Wtime();
-  MPI_Reduce(&end, &globalEnd, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  time=MPI_Wtime()-start;
+  MPI_Reduce(&time, &globalTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   if(rank==0)
-    iterationTimes.push_back(globalEnd-globalStart);
+    iterationTimes.push_back(globalTime);
   //######################################################################
 }
 
