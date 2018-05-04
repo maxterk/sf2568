@@ -19,30 +19,54 @@ B3 = importdata(filename6);
 time_par=(A1+A2+A3)/3;
 time_seq=(B1+B2+B3)/3;
 
-fastestSeq=1:numel(time_seq);
-fastestSeq=fastestSeq'.*time_seq
+cumSeq=1:numel(time_seq);
+cumSeq=cumSeq'.*time_seq;
+figure(1)
+plot(cumSeq,'-o')
+fastestSeq=min(cumSeq);
+xlabel('Segments')
+ylabel('Sequential time')
+legend('No synchronization')
+print('sequentialDivConq','-dpng')
 
-figure(2)
+
+figure(2)   
 plot(time_par,'-o')
 hold on
 plot(time_seq,'-or')
-xlabel('processors')
-ylabel('time')
+xlabel('Processors')
+ylabel('Iteration time')
 legend('Synchronization','No synchronization')
+print('parallelDivConq','-dpng')
 
-speed_par=time_par(1)./time_par;
 
-figure(2)
+speed_par=fastestSeq./time_par;
+speed_seq=fastestSeq./time_seq;
+figure(3)
 plot(speed_par,'-o')
-xlabel('processors')
-ylabel('speedup')
-
-
-speed_seq=time_seq(1)./time_seq;
-
-figure(2)
 hold on
 plot(speed_seq,'-or')
-xlabel('processors')
-ylabel('speedup')
+plot(1:numel(time_seq))
+xlabel('Processors')
+ylabel('Speedup')
+legend('Synchronization','No synchronization','Linear')
+print('speedUp','-dpng')
+
+speed_par=time_par(1)./time_par;
+speed_seq=time_seq(1)./time_seq;
+figure(4)
+plot(speed_par,'-o')
+hold on
+plot(speed_seq,'-or')
+plot(1:numel(time_seq))
+xlabel('Processors')
+ylabel('Speedup')
+legend('Synchronization','No synchronization','Linear')
+print('notSpeedUp','-dpng')
+
+%%
+figure(5)
+plot(time_par./time_seq)
+xlabel('Processors')
+ylabel('')
 
