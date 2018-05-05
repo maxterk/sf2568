@@ -10,7 +10,7 @@ A3 = importdata(filename3);
 
 filename4 = 'output_seq_iter_1.txt';
 filename5 = 'output_seq_iter_2.txt';
-filename6 = 'output_seq_iter_2.txt';
+filename6 = 'output_seq_iter_3.txt';
 B1 = importdata(filename4);
 B2 = importdata(filename5);
 B3 = importdata(filename6);
@@ -71,10 +71,9 @@ ylabel('Speedup')
 legend('Synchronization','No synchronization','Linear')
 print('notSpeedUp','-dpng')
 
-%%
 figure(5)
 plot(100*time_par./time_seq-100)
 xlabel('Processors')
 ylabel('Communication overhead time [%]')
 print('Overhead','-dpng')
-
+%
