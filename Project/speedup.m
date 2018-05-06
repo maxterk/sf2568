@@ -59,7 +59,7 @@ ylabel('Sequential time')
 legend('No synchronization')
 print(strcat(prefix,'sequentialDivConq'),'-dpng')
 
-%%
+%
 figure(2)   
 plot(time_par,'-o')
 hold on
@@ -69,7 +69,7 @@ ylabel('Iteration time')
 legend('Synchronization','No synchronization')
 print(strcat(prefix,'parallelDivConq'),'-dpng')
 
-%%
+%
 speed_par=fastestSeq./time_par;
 speed_seq=fastestSeq./time_seq;
 figure(3)
@@ -82,7 +82,7 @@ ylabel('Speedup')
 legend('Synchronization','No synchronization','Linear')
 print(strcat(prefix,'speedUp'),'-dpng')
 
-%%
+%
 speed_par=time_par(1)./time_par;
 speed_seq=time_seq(1)./time_seq;
 figure(4)
@@ -95,14 +95,14 @@ ylabel('Speedup')
 legend('Synchronization','No synchronization','Linear')
 print(strcat(prefix,'notSpeedUp'),'-dpng')
 
-%%
+%
 figure(5)
 plot(100*time_par./time_seq-100)
 xlabel('Processors')
 ylabel('Communication overhead time [%]')
 print(strcat(prefix,'Overhead'),'-dpng')
 
-%%
+%
 speed_par=fastestSeq./time_par;
 figure(6)
 plot(speed_par./np,'-o')
